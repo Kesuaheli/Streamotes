@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import xeed.mc.streamotes.ActivationOption;
+import xeed.mc.streamotes.EmoteReplace;
 import xeed.mc.streamotes.Streamotes;
 import xeed.mc.streamotes.emoticon.EmoticonRegistry;
 
@@ -25,21 +25,7 @@ public class MixinChatMessages {
 	@Inject(method = "getRenderedChatMessage", at = @At("RETURN"), cancellable = true)
 	private static void maybeGetRenderedChatMessage(String input, CallbackInfoReturnable<String> cir) {
 		var mode = Streamotes.INSTANCE.getConfig().activationMode;
-		cir.setReturnValue(Streamotes.EMOTE_PATTERN.matcher(cir.getReturnValue()).replaceAll(x -> {
-			var name = x.group();
-			var hasFix = name.length() > 1 && name.charAt(0) == ':' && name.charAt(name.length() - 1) == ':';
-
-			var emoticon = mode != ActivationOption.Required || hasFix
-				? EmoticonRegistry.fromName(name)
-				: null;
-
-			if (emoticon == null && mode != ActivationOption.Disabled && hasFix) {
-				name = name.substring(1, name.length() - 1);
-				emoticon = EmoticonRegistry.fromName(name);
-			}
-			if (emoticon != null) Streamotes.log("Emote found: " + emoticon.getName());
-			return emoticon != null ? Streamotes.CHAT_TRIGGER + emoticon.code + Streamotes.CHAT_SEPARATOR : name;
-		}));
+		cir.setReturnValue(EmoteReplace.findAndReplaceAll(cir.getReturnValue()));
 	}
 
 	@WrapOperation(method = "breakRenderedChatMessageLines", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/util/TextCollector;getCombined()Lnet/minecraft/text/StringVisitable;"))
